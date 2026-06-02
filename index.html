@@ -7,6 +7,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Lab 9</title>
 
+  <!-- Auto-install config must appear before the agent script (TrackJS docs). -->
+  <script>
+    window._trackJs = {
+      token: '96c90aedb3694535aa8ccb8c2f4692e5',
+    };
+  </script>
+  <script
+    src="https://cdn.trackjs.com/agent/v3/latest/t.js"
+    crossorigin="anonymous"
+    onerror="console.error('TrackJS script failed to load. Use Live Server (http://), not file://, and disable ad blockers for this page.')"
+  ></script>
+  <script>
+    if (window.TrackJS) {
+      if (!TrackJS.isInstalled || !TrackJS.isInstalled()) {
+        TrackJS.install({
+          token: '96c90aedb3694535aa8ccb8c2f4692e5',
+        });
+      }
+      console.log('TrackJS ready. Try: TrackJS.track("Testing TrackJS!")');
+    } else {
+      console.error(
+        'TrackJS agent did not load — TrackJS.track will say "agent must be installed". Check Network tab for t.js (blocked or offline).',
+      );
+    }
+  </script>
+
   <style>
     button {
       margin: 3px;
@@ -88,20 +114,186 @@
   </main>
 
   <script>
+    // Catches uncaught errors outside try/catch (e.g. Trigger a Global Error button).
+    // ajaxref-style reporting would POST message/source here via fetch() or XMLHttpRequest.
+    window.onerror = (message, source, lineno, colno, error) => {
+      console.log(
+        '[Global error caught]',
+        message,
+        `at ${source}:${lineno}:${colno}`,
+        error,
+      );
+      return false;
+    };
+
+    class CalculatorError extends Error {
+      constructor(message) {
+        super(message);
+        this.name = 'CalculatorError';
+      }
+    }
+
+    class DivideByZeroError extends CalculatorError {
+      constructor() {
+        super('Cannot divide by zero');
+        this.name = 'DivideByZeroError';
+      }
+    }
+
+    function calculate(firstStr, secondStr, operator) {
+      if (firstStr === '' || secondStr === '') {
+        throw new CalculatorError('Both numbers are required');
+      }
+      const a = Number(firstStr);
+      const b = Number(secondStr);
+      if (Number.isNaN(a) || Number.isNaN(b)) {
+        throw new CalculatorError('Inputs must be valid numbers');
+      }
+      if (operator === '/' && b === 0) {
+        throw new DivideByZeroError();
+      }
+      switch (operator) {
+        case '+':
+          return a + b;
+        case '-':
+          return a - b;
+        case '*':
+          return a * b;
+        case '/':
+          return a / b;
+        default:
+          throw new CalculatorError(`Unknown operator: ${operator}`);
+      }
+    }
+
     let form = document.querySelector('form');
-    form.addEventListener('submit', e => {
+    form.addEventListener('submit', (e) => {
       e.preventDefault();
-      let output = document.querySelector('output');
-      let firstNum = document.querySelector('#first-num').value;
-      let secondNum = document.querySelector('#second-num').value;
-      let operator = document.querySelector('#operator').value;
-      output.innerHTML = eval(`${firstNum} ${operator} ${secondNum}`);
+      const output = document.querySelector('output');
+
+      try {
+        const firstNum = document.querySelector('#first-num').value;
+        const secondNum = document.querySelector('#second-num').value;
+        const operator = document.querySelector('#operator').value;
+
+        if (!output) {
+          throw new CalculatorError(
+            'Result element is missing — check whether output was commented out in HTML',
+          );
+        }
+
+        const result = calculate(firstNum, secondNum, operator);
+        output.textContent = result;
+      } catch (err) {
+        const message =
+          err instanceof CalculatorError
+            ? err.message
+            : 'Unexpected error during calculation';
+        console.error(err);
+        if (output) {
+          output.textContent = message;
+        } else {
+          console.error('Cannot display error:', message);
+        }
+      } finally {
+        console.log('Calculation attempt finished');
+      }
     });
 
     let errorBtns = Array.from(document.querySelectorAll('#error-btns > button'));
 
-    // Start your code here
-    // You may move this JS to another file if you wish
+    const sampleUser = {
+      name: 'Amberly',
+      role: 'student',
+      skills: ['JS', 'HTML'],
+    };
+    const sampleRows = [
+      { id: 1, name: 'Amberly', score: 95 },
+      { id: 2, name: 'Ada', score: 87 },
+    ];
+    const TIMER_LABEL = 'lab9-timer';
+
+    function traceDemo() {
+      console.trace('Stack trace from Console Trace button');
+    }
+
+    function handleConsoleDemo(label) {
+      const firstNum = document.querySelector('#first-num').value;
+      const secondNum = document.querySelector('#second-num').value;
+      const operator = document.querySelector('#operator').value;
+
+      switch (label) {
+        case 'Console Log':
+          console.log('Demo log:', sampleUser);
+          break;
+        case 'Console Error':
+          console.error('Calculation failed', sampleUser);
+          break;
+        case 'Console Count':
+          console.count('button-clicks');
+          break;
+        case 'Console Warn':
+          console.warn('Check calculator inputs before submitting.', {
+            firstNum,
+            secondNum,
+          });
+          break;
+        case 'Console Assert':
+          console.assert(
+            firstNum !== '' && secondNum !== '',
+            'Both calculator inputs must be filled',
+          );
+          break;
+        case 'Console Clear':
+          console.clear();
+          break;
+        case 'Console Dir':
+          console.dir(sampleUser);
+          break;
+        case 'Console dirxml':
+          console.dirxml(document.querySelector('fieldset'));
+          break;
+        case 'Console Group Start':
+          console.group('Calculator state');
+          console.log('first:', firstNum);
+          console.log('operator:', operator);
+          console.log('second:', secondNum);
+          break;
+        case 'Console Group End':
+          console.groupEnd();
+          break;
+        case 'Console Table':
+          console.table(sampleRows);
+          break;
+        case 'Start Timer':
+          // Click End Timer afterward to print elapsed time.
+          console.time(TIMER_LABEL);
+          break;
+        case 'End Timer':
+          console.timeEnd(TIMER_LABEL);
+          break;
+        case 'Console Trace':
+          traceDemo();
+          break;
+        default:
+          break;
+      }
+    }
+
+    errorBtns.forEach((btn) => {
+      const label = btn.textContent.trim();
+      if (label === 'Trigger a Global Error') return;
+      btn.addEventListener('click', () => handleConsoleDemo(label));
+    });
+
+    const globalErrorBtn = errorBtns.find(
+      (btn) => btn.textContent.trim() === 'Trigger a Global Error',
+    );
+    if (globalErrorBtn) {
+      globalErrorBtn.addEventListener('click', () => {
+        throw new CalculatorError('Intentional global error for Lab 9');
+      });
+    }
   </script>
 </body>
 
